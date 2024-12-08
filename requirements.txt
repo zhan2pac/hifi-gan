@@ -1,5 +1,6 @@
-torch==2.2.0
-torchvision==0.17.0
+torch==2.5.0
+torchaudio==2.5.0
+torchvision==0.20.0
 torchmetrics
 numpy==1.26.4
 tqdm
@@ -8,6 +9,7 @@ pandas
 wandb
 comet_ml
 hydra-core
+torchinfo
 
 black
 isort

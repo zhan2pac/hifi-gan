@@ -1,9 +1,11 @@
 import warnings
+import os
 
 import hydra
 import torch
 from hydra.utils import instantiate
 from omegaconf import OmegaConf
+from torchinfo import summary
 
 from src.datasets.data_utils import get_dataloaders
 from src.trainer import Trainer
@@ -12,7 +14,7 @@ from src.utils.init_utils import set_random_seed, setup_saving_and_logging
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-@hydra.main(version_base=None, config_path="src/configs", config_name="baseline")
+@hydra.main(version_base=None, config_path="src/configs", config_name="train")
 def main(config):
     """
     Main script for training. Instantiates the model, optimizer, scheduler,
@@ -28,6 +30,8 @@ def main(config):
     logger = setup_saving_and_logging(config)
     writer = instantiate(config.writer, logger, project_config)
 
+    device_ids = config.trainer.device_ids
+    os.environ["CUDA_VISIBLE_DEVICES"] = ", ".join(map(str, device_ids))
     if config.trainer.device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"
     else:
@@ -39,16 +43,28 @@ def main(config):
 
     # build model architecture, then print to console
     model = instantiate(config.model).to(device)
-    logger.info(model)
+    if config.trainer.parallel:
+        model = torch.nn.DataParallel(model)
+    summary(model)
 
     # get function handles of loss and metrics
-    loss_function = instantiate(config.loss_function).to(device)
+    loss_function = {
+        "G": instantiate(config.loss_function.generator).to(device),
+        "D": instantiate(config.loss_function.discriminator).to(device),
+    }
     metrics = instantiate(config.metrics)
 
     # build optimizer, learning rate scheduler
-    trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = instantiate(config.optimizer, params=trainable_params)
-    lr_scheduler = instantiate(config.lr_scheduler, optimizer=optimizer)
+    g_trainable_params = filter(lambda p: p.requires_grad, model.Generator.parameters())
+    d_trainable_params = filter(lambda p: p.requires_grad, model.Discriminator.parameters())
+    optimizer = {
+        "G": instantiate(config.optimizer, params=g_trainable_params),
+        "D": instantiate(config.optimizer, params=d_trainable_params),
+    }
+    lr_scheduler = {
+        "G": instantiate(config.lr_scheduler, optimizer=optimizer["G"]),
+        "D": instantiate(config.lr_scheduler, optimizer=optimizer["D"]),
+    }
 
     # epoch_len = number of iterations for iteration-based training
     # epoch_len = None or len(dataloader) for epoch-based training

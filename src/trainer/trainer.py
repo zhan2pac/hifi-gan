@@ -1,3 +1,7 @@
+import random
+
+random.seed(42)
+
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 
@@ -32,20 +36,44 @@ class Trainer(BaseTrainer):
         metric_funcs = self.metrics["inference"]
         if self.is_train:
             metric_funcs = self.metrics["train"]
-            self.optimizer.zero_grad()
+            self.optimizer["G"].zero_grad()
+            self.optimizer["D"].zero_grad()
 
-        outputs = self.model(**batch)
-        batch.update(outputs)
+        # ================ Discriminators step ================
+        g_output = self.model.Generator(**batch)
+        audio_fake = g_output["audio_fake"].detach()
+        batch.update({"audio_fake": audio_fake})
 
-        all_losses = self.criterion(**batch)
-        batch.update(all_losses)
+        d_output = self.model.Discriminator(**batch)
+        batch.update(d_output)
+
+        d_losses = self.criterion["D"](**batch)
+        batch.update(d_losses)
 
         if self.is_train:
-            batch["loss"].backward()  # sum of all losses is always called loss
+            batch["d_loss"].backward()
             self._clip_grad_norm()
-            self.optimizer.step()
-            if self.lr_scheduler is not None:
-                self.lr_scheduler.step()
+            self.optimizer["D"].step()
+            if self.lr_scheduler["D"] is not None:
+                self.lr_scheduler["D"].step()
+
+        # ================ Generator step ================
+        if self.is_train:
+            self.optimizer["G"].zero_grad()
+
+        batch.update(g_output)
+        d_output = self.model.Discriminator(**batch)
+        batch.update(d_output)
+
+        g_losses = self.criterion["G"](**batch)
+        batch.update(g_losses)
+
+        if self.is_train:
+            batch["g_loss"].backward()
+            self._clip_grad_norm()
+            self.optimizer["G"].step()
+            if self.lr_scheduler["G"] is not None:
+                self.lr_scheduler["G"].step()
 
         # update metrics for each loss (in case of multiple losses)
         for loss_name in self.config.writer.loss_names:
@@ -72,8 +100,14 @@ class Trainer(BaseTrainer):
 
         # logging scheme might be different for different partitions
         if mode == "train":  # the method is called only every self.log_step steps
-            # Log Stuff
-            pass
+            self.log_audio(**batch)
         else:
-            # Log Stuff
-            pass
+            self.log_audio(**batch)
+
+    def log_audio(self, audio, audio_fake, sample_rate, **batch):
+        idx = random.randint(0, len(audio) - 1)
+        gt_audio = audio[idx].detach().cpu()
+        fake_audio = audio_fake[idx].detach().cpu()
+
+        self.writer.add_audio("ground_truth/audio", gt_audio, sample_rate=sample_rate[idx])
+        self.writer.add_audio("generated/audio", fake_audio, sample_rate=sample_rate[idx])

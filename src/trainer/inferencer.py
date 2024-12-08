@@ -163,7 +163,7 @@ class Inferencer(BaseTrainer):
         batch_size = batch["melspec"].shape[0]
 
         for idx in range(batch_size):
-            if part != "custom":
+            if not self.use_tts:
                 gt_audio = batch["audio"][idx].detach().cpu().unsqueeze(0)  # [1, L]
             fake_audio = batch["audio_fake"][idx].detach().cpu().unsqueeze(0)
 
@@ -172,12 +172,12 @@ class Inferencer(BaseTrainer):
 
             if self.save_path is not None:
                 self.save_audio(self.save_path / part / "fake_audio", utt_id, fake_audio, sr)
-                if part != "custom":
+                if not self.use_tts:
                     self.save_audio(self.save_path / part / "gt_audio", utt_id, gt_audio, sr)
 
             if self.writer is not None:
                 self.writer.add_audio(f"generated/audio_{utt_id}", fake_audio, sample_rate=sr)
-                if part != "custom":
+                if not self.use_tts:
                     self.writer.add_audio(f"ground_truth/audio_{utt_id}", gt_audio, sample_rate=sr)
 
                 melspec = batch["melspec"][idx].detach().cpu()  # [C, L]

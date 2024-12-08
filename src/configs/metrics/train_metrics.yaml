@@ -1,0 +1,6 @@
+device: "auto"
+train: []
+inference:
+  - _target_: src.metrics.WVMOS
+    device: ${metrics.device}
+    name: "WVMOS"

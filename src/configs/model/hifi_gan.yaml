@@ -1,0 +1,16 @@
+_target_: src.model.HiFiGAN
+generator_config:
+  n_mels: ${datasets.train.melspec_params.n_mels}
+  hidden_dim: 512
+  upsample_rates: [8, 8, 4]
+  kernel_sizes_upsample: [16, 16, 8]
+  kernel_sizes_resblock: [3, 5, 7]
+  dilation_sizes_resblock: [[1, 2], [2, 6], [3, 12]]
+  resblock_type: "v3"
+discriminator_config:
+  mpd_config:
+    periods: [2, 3, 5, 7, 11]
+    kernel_size: 5
+    stride: 3
+  msd_config:
+    num_scales: 2

@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 import torch
 from numpy import inf
-from torch.nn.utils.parametrizations import clip_grad_norm_
+from torch.nn.utils import clip_grad_norm_
 from tqdm.auto import tqdm
 
 from src.datasets.data_utils import inf_loop

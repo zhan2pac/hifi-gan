@@ -1,7 +1,5 @@
 import random
 
-random.seed(42)
-
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 

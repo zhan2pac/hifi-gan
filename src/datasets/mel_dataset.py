@@ -1,11 +1,10 @@
 import random
+
 import torch
-
-import torchaudio
 import torch.nn.functional as F
-
-from torchaudio.transforms import MelSpectrogram
+import torchaudio
 from torch.utils.data import Dataset
+from torchaudio.transforms import MelSpectrogram
 
 from src.utils.io_utils import ROOT_PATH
 
@@ -64,8 +63,8 @@ class MelDataset(Dataset):
             else:
                 audio = F.pad(audio, (0, self.segment_size - audio.size(1)), value=0.0)
 
-        melspec = self.get_melspec(audio)
-        target_melspec = self.get_target_melspec(audio)
+        melspec = self.get_melspec(audio).clamp_(min=1e-5).log_()
+        target_melspec = self.get_target_melspec(audio).clamp_(min=1e-5).log_()
 
         return {
             "melspec": melspec,
@@ -89,14 +88,6 @@ class MelDataset(Dataset):
         return audio_tensor
 
     def normalize(self, audio):
-        length = torch.max(torch.abs(audio), dim=1).values
+        length = torch.max(torch.abs(audio))
         audio_norm = audio / length
         return audio_norm
-
-
-# ds = MelDataset(part="train")
-# item = ds[0]
-
-# print("index[0]", ds._index[0])
-# print(item["x_mel"].shape, item["y"].shape, item["target_mel"].shape)
-# print("min", item["y"].min(), "max", item["y"].max())

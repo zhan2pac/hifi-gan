@@ -13,13 +13,13 @@ def collate_fn(dataset_items: list[dict]):
         result_batch (dict[Tensor]): dict, containing batch-version
             of the tensors.
     """
-
     result_batch = {}
 
-    # example of collate_fn
-    result_batch["data_object"] = torch.vstack(
-        [elem["data_object"] for elem in dataset_items]
-    )
-    result_batch["labels"] = torch.tensor([elem["labels"] for elem in dataset_items])
+    result_batch["audio"] = torch.cat([elem["audio"] for elem in dataset_items], dim=0)  # [B, T]
+    result_batch["melspec"] = torch.cat([elem["melspec"] for elem in dataset_items], dim=0)  # [B, C, L]
+    result_batch["melspec_real"] = torch.cat([elem["melspec_real"] for elem in dataset_items], dim=0)  # [B, C, L]
+
+    result_batch["sample_rate"] = [elem["sample_rate"] for elem in dataset_items]
+    result_batch["wav_path"] = [elem["wav_path"] for elem in dataset_items]
 
     return result_batch

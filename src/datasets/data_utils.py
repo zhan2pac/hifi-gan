@@ -59,8 +59,10 @@ def get_dataloaders(config, device):
             tensor name.
     """
     # transforms or augmentations init
-    batch_transforms = instantiate(config.transforms.batch_transforms)
-    move_batch_transforms_to_device(batch_transforms, device)
+    batch_transforms = None
+    if "transforms" in config:
+        batch_transforms = instantiate(config.transforms.batch_transforms)
+        move_batch_transforms_to_device(batch_transforms, device)
 
     # dataset partitions init
     datasets = instantiate(config.datasets)  # instance transforms are defined inside
@@ -70,10 +72,11 @@ def get_dataloaders(config, device):
     for dataset_partition in config.datasets.keys():
         dataset = datasets[dataset_partition]
 
-        assert config.dataloader.batch_size <= len(dataset), (
-            f"The batch size ({config.dataloader.batch_size}) cannot "
-            f"be larger than the dataset length ({len(dataset)})"
-        )
+        batch_size = config.dataloader.batch_size
+        if dataset_partition != "test":
+            assert batch_size <= len(dataset), (
+                f"The batch size ({batch_size}) cannot " f"be larger than the dataset length ({len(dataset)})"
+            )
 
         partition_dataloader = instantiate(
             config.dataloader,
@@ -84,5 +87,10 @@ def get_dataloaders(config, device):
             worker_init_fn=set_worker_seed,
         )
         dataloaders[dataset_partition] = partition_dataloader
+
+        print(
+            f"Dataset partition {dataset_partition} of size: {len(dataset)}\t"
+            f"| num_batches: {len(partition_dataloader)} with batch_size={batch_size}"
+        )
 
     return dataloaders, batch_transforms

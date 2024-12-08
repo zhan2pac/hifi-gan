@@ -2,7 +2,6 @@ val:
   _target_: src.datasets.MelDataset
   part: "val"
   segment_size: null
-  limit: 5
   melspec_params:
     sample_rate: 22050
     n_fft: 1024
@@ -12,3 +11,5 @@ val:
     n_mels: 80
     center: false
     f_max: 8000
+  limit: 5
+  shuffle_index: false

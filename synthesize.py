@@ -16,7 +16,7 @@ from src.utils.io_utils import ROOT_PATH
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-@hydra.main(version_base=None, config_path="src/configs", config_name="resynthesize")
+@hydra.main(version_base=None, config_path="src/configs", config_name="synthesize")
 def main(config):
     """
     Main script for inference. Instantiates the model, metrics, and
@@ -65,7 +65,7 @@ def main(config):
         metrics=metrics,
         skip_model_load=False,
         writer=writer,
-        use_tts=False,
+        use_tts=True,
     )
 
     logs = inferencer.run_inference()

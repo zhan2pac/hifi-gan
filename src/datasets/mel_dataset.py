@@ -38,7 +38,8 @@ class MelDataset(Dataset):
             self._index = self._index[:limit]
 
         self.get_melspec = MelSpectrogram(**melspec_params)
-        del melspec_params["f_max"]
+        if "f_max" in melspec_params:
+            del melspec_params["f_max"]
         self.get_target_melspec = MelSpectrogram(**melspec_params)
 
     def _get_index(self, part):
@@ -75,7 +76,7 @@ class MelDataset(Dataset):
             "audio": audio,
             "melspec_real": target_melspec,
             "sample_rate": self.target_sr,
-            "wav_path": wav_path.name,
+            "utt_id": wav_path.stem,
         }
 
     def __len__(self):
@@ -115,4 +116,4 @@ class MelDataset(Dataset):
 # ds = MelDataset(part="test", melspec_params=melspec_params)
 # item = ds[0]
 # print("index[0]", ds._index[0])
-# print(item["wav_path"])
+# print(item["utt_id"])

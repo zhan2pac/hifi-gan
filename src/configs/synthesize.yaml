@@ -1,6 +1,6 @@
 defaults:
   - model: hifi_gan_v1
-  - datasets: samples_val  # samples_val (lj-speech), samples_test (out of sample)
+  - datasets: custom_dir
   - dataloader: batch_size_1  # wavs are not padded in collate, either cut segments or use batch_size=1
   - transforms: no_transform
   - _self_
@@ -10,14 +10,14 @@ metrics: null
 writer:
   _target_: src.logger.WandBWriter
   project_name: "hifi-gan"
-  run_name: "external-analysis"
+  run_name: "synthesis"
   mode: "online"
   loss_names: []
   log_checkpoints: False
   id_length: 8
 
 inferencer:
-  device_tensors: ["melspec", "audio", "melspec_real"] # which tensors should be on device (ex. GPU)
+  device_tensors: ["melspec"] # which tensors should be on device (ex. GPU)
   device: auto # device name or "auto"
   save_path: "saved_audio" # any name here, can be a dataset name
   seed: 42

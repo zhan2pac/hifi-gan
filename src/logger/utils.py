@@ -40,3 +40,30 @@ def plot_images(imgs, config):
     plt.close()
 
     return image
+
+
+def plot_spectrogram(spectrogram):
+    """
+    Plot spectrograms
+
+    Args:
+        spectrogram (Tensor): spectrogram tensor.
+    Returns:
+        image (Image): image of the spectrogram
+    """
+
+    fig, axes = plt.subplots(1, 1, figsize=(10, 2))
+    axes.pcolormesh(spectrogram)
+    axes.get_xaxis().set_visible(False)
+    axes.tick_params(left=False, labelleft=False)
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png", bbox_inches="tight")
+    buf.seek(0)
+
+    # convert buffer to Tensor
+    image = ToTensor()(PIL.Image.open(buf))
+
+    plt.close()
+
+    return image

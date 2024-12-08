@@ -97,6 +97,8 @@ class WandBWriter:
         Returns:
             object_name (str): updated object name.
         """
+        if self.mode == "":
+            return object_name
         return f"{object_name}_{self.mode}"
 
     def add_checkpoint(self, checkpoint_path, save_dir):

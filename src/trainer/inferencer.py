@@ -2,6 +2,7 @@ import torch
 import torchaudio
 from tqdm.auto import tqdm
 
+from src.logger.utils import plot_spectrogram
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
 from src.utils.io_utils import ROOT_PATH
@@ -27,6 +28,7 @@ class Inferencer(BaseTrainer):
         batch_transforms=None,
         skip_model_load=False,
         writer=None,
+        use_tts=False,
     ):
         """
         Initialize the Inferencer.
@@ -67,6 +69,7 @@ class Inferencer(BaseTrainer):
         self.evaluation_dataloaders = {k: v for k, v in dataloaders.items()}
 
         self.writer = writer
+        self.use_tts = use_tts
 
         # path definition
         self.save_path = save_path
@@ -85,6 +88,24 @@ class Inferencer(BaseTrainer):
             # init model
             pretrained_path = ROOT_PATH / config.inferencer.from_pretrained
             self._from_pretrained(pretrained_path)
+
+        if self.use_tts:
+            self.initialize_tacotron2()
+
+    def initialize_tacotron2(self):
+        print("Downloading Tacotron2...")
+        bundle = torchaudio.pipelines.TACOTRON2_WAVERNN_PHONE_LJSPEECH
+        self.processor = bundle.get_text_processor()
+        self.tacotron2 = bundle.get_tacotron2().to(self.device)
+
+    def generate_melspec(self, text):
+        with torch.inference_mode():
+            processed, lengths = self.processor(text)
+            processed = processed.to(self.device)
+            lengths = lengths.to(self.device)
+            spec, _, _ = self.tacotron2.infer(processed, lengths)
+
+        return spec
 
     def run_inference(self):
         """
@@ -122,14 +143,15 @@ class Inferencer(BaseTrainer):
                 the dataloader (possibly transformed via batch transform)
                 and model outputs.
         """
+        if self.use_tts:
+            melspec = self.generate_melspec(batch["text"])  # [1, C, L]
+            batch["melspec"] = melspec
+
         batch = self.move_batch_to_device(batch)
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
         g_output = self.model.Generator(**batch)
         batch.update(g_output)
-
-        d_output = self.model.Discriminator(**batch)
-        batch.update(d_output)
 
         if self.metrics is not None:
             for met in self.metrics["inference"]:
@@ -138,26 +160,34 @@ class Inferencer(BaseTrainer):
         # Some saving logic. This is an example
         # Use if you need to save predictions on disk
 
-        batch_size = batch["audio"].shape[0]
+        batch_size = batch["melspec"].shape[0]
 
         for idx in range(batch_size):
-            gt_audio = batch["audio"][idx].detach().cpu().unsqueeze(0)  # [1, L]
+            if part != "custom":
+                gt_audio = batch["audio"][idx].detach().cpu().unsqueeze(0)  # [1, L]
             fake_audio = batch["audio_fake"][idx].detach().cpu().unsqueeze(0)
+
             sr = batch["sample_rate"][idx]
-            wav_path = batch["wav_path"][idx]
+            utt_id = batch["utt_id"][idx]
 
             if self.save_path is not None:
-                (self.save_path / part / "gt_audio").mkdir(exist_ok=True, parents=True)
-                (self.save_path / part / "fake_audio").mkdir(exist_ok=True, parents=True)
-
-                torchaudio.save(self.save_path / part / "gt_audio" / wav_path, gt_audio, sr)
-                torchaudio.save(self.save_path / part / "fake_audio" / wav_path, fake_audio, sr)
+                self.save_audio(self.save_path / part / "fake_audio", utt_id, fake_audio, sr)
+                if part != "custom":
+                    self.save_audio(self.save_path / part / "gt_audio", utt_id, gt_audio, sr)
 
             if self.writer is not None:
-                self.writer.add_audio("ground_truth/audio", gt_audio, sample_rate=sr)
-                self.writer.add_audio("generated/audio", fake_audio, sample_rate=sr)
+                self.writer.add_audio(f"generated/audio_{utt_id}", fake_audio, sample_rate=sr)
+                if part != "custom":
+                    self.writer.add_audio(f"ground_truth/audio_{utt_id}", gt_audio, sample_rate=sr)
+
+                melspec = batch["melspec"][idx].detach().cpu()  # [C, L]
+                self.writer.add_image(f"spectrogram/spec_{utt_id}", plot_spectrogram(melspec))
 
         return batch
+
+    def save_audio(self, path, utt_id, audio_tensor, sr):
+        path.mkdir(exist_ok=True, parents=True)
+        torchaudio.save(path / (utt_id + ".wav"), audio_tensor, sr)
 
     def _inference_part(self, part, dataloader):
         """

@@ -13,13 +13,13 @@ def init_weights(m, mean=0.0, std=0.01):
 class MRF(nn.Module):
     """Multi-Receptive Field Fusion Module"""
 
-    def __init__(self, in_channels, kernel_sizes, dilation_sizes):
+    def __init__(self, in_channels, kernel_sizes, dilation_sizes, resblock_type):
         super().__init__()
         self.num_blocks = len(kernel_sizes)
 
         self.conv_blocks = nn.ModuleList()
         for kernel_size, dilation_size in zip(kernel_sizes, dilation_sizes):
-            self.conv_blocks.append(ResBlock(in_channels, kernel_size, dilation_size))
+            self.conv_blocks.append(ResBlock(in_channels, kernel_size, dilation_size, resblock_type))
 
     def forward(self, x):
         out_sum = 0.0
@@ -62,7 +62,7 @@ class Generator(nn.Module):
                     )
                 )
             )
-            self.mrf_blocks.append(MRF(out_channels, kernel_sizes_resblock, dilation_sizes_resblock))
+            self.mrf_blocks.append(MRF(out_channels, kernel_sizes_resblock, dilation_sizes_resblock, resblock_type))
 
         self.output_proj = weight_norm(nn.Conv1d(out_channels, 1, kernel_size=7, padding=3))
         self.tanh = nn.Tanh()

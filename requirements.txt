@@ -9,8 +9,15 @@ pandas
 wandb
 comet_ml
 hydra-core
+
 torchinfo
+transformers
+librosa
+pytorch_lightning
+deep-phonemizer
 
 black
 isort
 pre-commit
+wget
+tarfile

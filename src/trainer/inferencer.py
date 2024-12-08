@@ -1,8 +1,10 @@
 import torch
+import torchaudio
 from tqdm.auto import tqdm
 
 from src.metrics.tracker import MetricTracker
 from src.trainer.base_trainer import BaseTrainer
+from src.utils.io_utils import ROOT_PATH
 
 
 class Inferencer(BaseTrainer):
@@ -24,6 +26,7 @@ class Inferencer(BaseTrainer):
         metrics=None,
         batch_transforms=None,
         skip_model_load=False,
+        writer=None,
     ):
         """
         Initialize the Inferencer.
@@ -46,6 +49,7 @@ class Inferencer(BaseTrainer):
                 pre-trained checkpoint path. Set this argument to True if
                 the model desirable weights are defined outside of the
                 Inferencer Class.
+            writer (WandBWriter): optionally log predictions to wandb server
         """
         assert (
             skip_model_load or config.inferencer.get("from_pretrained") is not None
@@ -62,8 +66,9 @@ class Inferencer(BaseTrainer):
         # define dataloaders
         self.evaluation_dataloaders = {k: v for k, v in dataloaders.items()}
 
-        # path definition
+        self.writer = writer
 
+        # path definition
         self.save_path = save_path
 
         # define metrics
@@ -74,11 +79,12 @@ class Inferencer(BaseTrainer):
                 writer=None,
             )
         else:
-            self.evaluation_metrics = None
+            self.evaluation_metrics = MetricTracker(writer=None)
 
         if not skip_model_load:
             # init model
-            self._from_pretrained(config.inferencer.get("from_pretrained"))
+            pretrained_path = ROOT_PATH / config.inferencer.from_pretrained
+            self._from_pretrained(pretrained_path)
 
     def run_inference(self):
         """
@@ -119,36 +125,37 @@ class Inferencer(BaseTrainer):
         batch = self.move_batch_to_device(batch)
         batch = self.transform_batch(batch)  # transform batch on device -- faster
 
-        outputs = self.model(**batch)
-        batch.update(outputs)
+        g_output = self.model.Generator(**batch)
+        batch.update(g_output)
 
-        if metrics is not None:
+        d_output = self.model.Discriminator(**batch)
+        batch.update(d_output)
+
+        if self.metrics is not None:
             for met in self.metrics["inference"]:
                 metrics.update(met.name, met(**batch))
 
         # Some saving logic. This is an example
         # Use if you need to save predictions on disk
 
-        batch_size = batch["logits"].shape[0]
-        current_id = batch_idx * batch_size
+        batch_size = batch["audio"].shape[0]
 
-        for i in range(batch_size):
-            # clone because of
-            # https://github.com/pytorch/pytorch/issues/1995
-            logits = batch["logits"][i].clone()
-            label = batch["labels"][i].clone()
-            pred_label = logits.argmax(dim=-1)
-
-            output_id = current_id + i
-
-            output = {
-                "pred_label": pred_label,
-                "label": label,
-            }
+        for idx in range(batch_size):
+            gt_audio = batch["audio"][idx].detach().cpu().unsqueeze(0)  # [1, L]
+            fake_audio = batch["audio_fake"][idx].detach().cpu().unsqueeze(0)
+            sr = batch["sample_rate"][idx]
+            wav_path = batch["wav_path"][idx]
 
             if self.save_path is not None:
-                # you can use safetensors or other lib here
-                torch.save(output, self.save_path / part / f"output_{output_id}.pth")
+                (self.save_path / part / "gt_audio").mkdir(exist_ok=True, parents=True)
+                (self.save_path / part / "fake_audio").mkdir(exist_ok=True, parents=True)
+
+                torchaudio.save(self.save_path / part / "gt_audio" / wav_path, gt_audio, sr)
+                torchaudio.save(self.save_path / part / "fake_audio" / wav_path, fake_audio, sr)
+
+            if self.writer is not None:
+                self.writer.add_audio("ground_truth/audio", gt_audio, sample_rate=sr)
+                self.writer.add_audio("generated/audio", fake_audio, sample_rate=sr)
 
         return batch
 

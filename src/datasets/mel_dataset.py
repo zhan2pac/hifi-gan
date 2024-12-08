@@ -17,8 +17,9 @@ class MelDataset(Dataset):
         part,
         melspec_params,
         data_dir=None,
-        shuffle_index=True,
         segment_size=None,
+        shuffle_index=True,
+        limit=None,
     ):
         self.segment_size = segment_size
         self.target_sr = melspec_params["sample_rate"]
@@ -29,9 +30,12 @@ class MelDataset(Dataset):
         self._data_dir = data_dir
         self._index = self._get_index(part)
 
-        random.seed(1234)
         if shuffle_index:
+            random.seed(42)
             random.shuffle(self._index)
+
+        if limit is not None:
+            self._index = self._index[:limit]
 
         self.get_melspec = MelSpectrogram(**melspec_params)
         del melspec_params["f_max"]
@@ -71,7 +75,7 @@ class MelDataset(Dataset):
             "audio": audio,
             "melspec_real": target_melspec,
             "sample_rate": self.target_sr,
-            "wav_path": wav_path,
+            "wav_path": wav_path.name,
         }
 
     def __len__(self):
@@ -91,3 +95,24 @@ class MelDataset(Dataset):
         length = torch.max(torch.abs(audio))
         audio_norm = audio / length
         return audio_norm
+
+
+# from pathlib import Path
+
+# ROOT_PATH = Path(__file__).absolute().resolve().parent.parent.parent
+
+# melspec_params = {
+#     "sample_rate": 22050,
+#     "n_fft": 1024,
+#     "win_length": 1024,
+#     "hop_length": 256,
+#     "pad": 384,  # (n_fft - hop_length) // 2
+#     "n_mels": 80,
+#     "center": False,
+#     "f_max": 8000,
+# }
+
+# ds = MelDataset(part="test", melspec_params=melspec_params)
+# item = ds[0]
+# print("index[0]", ds._index[0])
+# print(item["wav_path"])

@@ -107,6 +107,7 @@ saved/
 wandb/
 .cometml-runs/
 outputs/
+saved_audio/
 
 # editor, os cache directory
 .vscode/

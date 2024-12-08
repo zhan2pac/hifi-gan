@@ -1,0 +1,25 @@
+defaults:
+  - model: hifi_gan_v1
+  - datasets: samples_val
+  - dataloader: batch_size_1  # wavs are not padded in collate, either cut segments or use batch_size=1
+  - transforms: no_transform
+  - _self_
+
+metrics: null
+
+writer:
+  _target_: src.logger.WandBWriter
+  project_name: "hifi-gan"
+  run_name: "external-analysis"
+  mode: "offline"
+  loss_names: []
+  log_checkpoints: False # set to True if you want to log save_dir with checkpoints to W&B
+  id_length: 8 # length of the run_id
+
+inferencer:
+  device_tensors: ["melspec", "audio", "melspec_real"] # which tensors should be on device (ex. GPU)
+  device: auto # device name or "auto"
+  save_path: "saved_audio" # any name here, can be a dataset name
+  seed: 1234
+  from_pretrained: "saved/hifigan_v1/model_best.pth" # path to the pretrained model
+  device_ids: [0]  # default: [0]

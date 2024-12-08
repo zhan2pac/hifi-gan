@@ -20,5 +20,5 @@ val:
 test:
   _target_: src.datasets.MelDataset
   part: "test"
-  segment_size: 131072
+  segment_size: 131072  # 2^17 samples ~ 6 sec
   melspec_params: ${datasets.train.melspec_params}

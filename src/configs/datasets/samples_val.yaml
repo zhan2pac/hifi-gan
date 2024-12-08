@@ -1,0 +1,14 @@
+val:
+  _target_: src.datasets.MelDataset
+  part: "val"
+  segment_size: null
+  limit: 5
+  melspec_params:
+    sample_rate: 22050
+    n_fft: 1024
+    win_length: 1024
+    hop_length: 256
+    pad: 384  # (n_fft - hop_length) // 2
+    n_mels: 80
+    center: false
+    f_max: 8000

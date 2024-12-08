@@ -1,0 +1,4 @@
+custom:
+  _target_: src.datasets.CustomDirDataset
+  data_dir: data/NameOfTheDirectoryWithUtterances
+  target_sr: 22050

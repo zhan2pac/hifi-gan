@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 from torch.nn.utils.parametrizations import weight_norm
 
@@ -88,4 +89,11 @@ class Generator(nn.Module):
         x = self.output_proj(x)
         x = self.tanh(x).squeeze(1)
 
+        x = self.peak_normalize(x)
+
         return {"audio_fake": x}
+
+    def peak_normalize(self, tensor):
+        # https://discuss.pytorch.org/t/how-to-normalize-audio-data-in-pytorch/187709/2
+        tensor = tensor - torch.mean(tensor)
+        return tensor / torch.max(torch.abs(tensor))

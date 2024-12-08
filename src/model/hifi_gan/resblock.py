@@ -9,7 +9,7 @@ def init_weights(m, mean=0.0, std=0.01):
 
 
 class ResBlock(nn.Module):
-    def __init__(self, in_channels, kernel_size=3, dilation_sizes=(1, 2), resblock_type="v3"):
+    def __init__(self, in_channels, kernel_size=3, dilation_sizes=(1, 2), resblock_type="v1"):
         super().__init__()
 
         self.convs = nn.ModuleList()
@@ -19,7 +19,7 @@ class ResBlock(nn.Module):
                     nn.Conv1d(in_channels, in_channels, kernel_size, padding=(kernel_size - 1) * d // 2, dilation=d)
                 )
             )
-            if resblock_type != "v3":
+            if resblock_type == "v1" or resblock_type == "v2":
                 self.convs.append(
                     weight_norm(nn.Conv1d(in_channels, in_channels, kernel_size, padding=(kernel_size - 1) // 2))
                 )

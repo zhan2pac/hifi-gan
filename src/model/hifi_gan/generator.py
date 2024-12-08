@@ -38,7 +38,7 @@ class Generator(nn.Module):
         kernel_sizes_upsample,
         kernel_sizes_resblock,
         dilation_sizes_resblock,
-        resblock_type="v3",
+        resblock_type="v1",
     ):
         super().__init__()
         self.feature_proj = weight_norm(nn.Conv1d(n_mels, hidden_dim, kernel_size=7, padding=3))

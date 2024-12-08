@@ -21,5 +21,5 @@ inferencer:
   device: auto # device name or "auto"
   save_path: "saved_audio" # any name here, can be a dataset name
   seed: 42
-  from_pretrained: "saved/hifigan_v1/model_best.pth" # path to the pretrained model
+  from_pretrained: "saved/hifigan_v1_lrcos/model_best.pth" # path to the pretrained model
   device_ids: [0]  # default: [0]

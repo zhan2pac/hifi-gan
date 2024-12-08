@@ -14,11 +14,10 @@ optimizer:
   weight_decay: 0.01
 
 lr_scheduler:
-  _target_: torch.optim.lr_scheduler.ExponentialLR
-  gamma: 0.999
-  last_epoch: -1
-  # _target_: torch.optim.lr_scheduler.CosineAnnealingLR
-  # T_max: 81000
+  # _target_: torch.optim.lr_scheduler.ExponentialLR
+  # gamma: 0.999
+  _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+  T_max: 41000
 
 loss_function:
   generator:
@@ -34,7 +33,7 @@ trainer:
   n_epochs: 50
   epoch_len: null # one epoch - 809 steps
   device_tensors: ["melspec", "audio", "melspec_real"] # which tensors should be on device (ex. GPU)
-  # max_grad_norm: 100
+  # max_grad_norm: 150
   resume_from: null # null or path to the checkpoint dir with *.pth and config.yaml
   device: auto # device name or "auto"
   override: true # if True, will override the previous run with the same name
@@ -44,5 +43,5 @@ trainer:
   save_dir: "saved"
   seed: 42
   parallel: false
-  device_ids: [3]  # default: [0]
+  device_ids: [4]  # default: [0]
   # from_pretrained: saved/hifi_gan_v3/model_best.pth
